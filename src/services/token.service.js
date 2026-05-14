@@ -70,8 +70,8 @@ const revokeAllUserTokens = async (userId) => {
     await RefreshToken.update({ isRevoked: true }, { where: { userId } });
 };
 
-// Purge Expired Tokens
-const purgeExpiredTokens = async () => {
+// Delete Expired Tokens
+const deleteExpiredTokens = async () => {
     const { Op } = require('sequelize');
     const deleted = await RefreshToken.destroy({
         where: { expiresAt: { [Op.lt]: new Date() } },
@@ -85,5 +85,5 @@ module.exports = {
     rotateRefreshToken,
     revokeRefreshToken,
     revokeAllUserTokens,
-    purgeExpiredTokens,
+    deleteExpiredTokens,
 };

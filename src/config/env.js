@@ -25,6 +25,10 @@ const envSchema = Joi.object({
     EMAIL_PASS: Joi.string().required(),
     EMAIL_FROM: Joi.string().required(),
 
+    GOOGLE_CLIENT_ID: Joi.string().allow('').default(''),
+    GOOGLE_CLIENT_SECRET: Joi.string().allow('').default(''),
+    GOOGLE_CALLBACK_URL: Joi.string().default('http://localhost:5000/api/auth/google/callback'),
+
     CLIENT_URL: Joi.string().default('http://localhost:5173'),
     SERVER_URL: Joi.string().default('http://localhost:5000'),
 }).unknown(true);
@@ -32,7 +36,7 @@ const envSchema = Joi.object({
 const { error, value: envVars } = envSchema.validate(process.env);
 
 if (error) {
-    throw new Error(`❌ Config validation error: ${error.message}`);
+    throw new Error(`Config validation error: ${error.message}`);
 }
 
 module.exports = {
@@ -62,6 +66,12 @@ module.exports = {
         user: envVars.EMAIL_USER,
         pass: envVars.EMAIL_PASS,
         from: envVars.EMAIL_FROM,
+    },
+
+    google: {
+        clientId: envVars.GOOGLE_CLIENT_ID,
+        clientSecret: envVars.GOOGLE_CLIENT_SECRET,
+        callbackUrl: envVars.GOOGLE_CALLBACK_URL,
     },
     clientUrl: envVars.CLIENT_URL,
     serverUrl: envVars.SERVER_URL,

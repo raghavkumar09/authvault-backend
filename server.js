@@ -10,11 +10,11 @@ const config = require('./src/config/env');
 const logger = require('./src/config/logger');
 const { connectDB } = require('./src/config/database');
 const { connectRedis } = require('./src/config/redis');
-// const { initPassport, passport } = require('./src/config/passport');
+const { initPassport, passport } = require('./src/config/passport');
 const routes = require('./src/routes');
 const { errorHandler, notFoundHandler } = require('./src/middlewares/errorHandler');
 const { apiLimiterMiddleware } = require('./src/middlewares/rateLimiter');
-const { purgeExpiredTokens } = require('./src/services/token.service');
+const { deleteExpiredTokens } = require('./src/services/token.service');
 
 require('./src/models');
 
@@ -47,8 +47,8 @@ app.use(morgan(config.env === 'development' ? 'dev' : 'combined', {
 
 // Passport (OAuth)
 
-// initPassport();
-// app.use(passport.initialize());
+initPassport();
+app.use(passport.initialize());
 
 // Static Uploads
 
@@ -73,7 +73,7 @@ const scheduleCleanup = () => {
     const INTERVAL_MS = 6 * 60 * 60 * 1000; // Every 6 hours
     setInterval(async () => {
         try {
-            const deleted = await purgeExpiredTokens();
+            const deleted = await deleteExpiredTokens();
             if (deleted > 0) logger.info(`🧹 Purged ${deleted} expired refresh tokens`);
         } catch (err) {
             logger.warn(`Token cleanup failed: ${err.message}`);

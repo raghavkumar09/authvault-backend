@@ -131,9 +131,46 @@ const resetPassword = async (token, newPassword) => {
     return sanitizeUser(user);
 };
 
+// Google OAuth
+
+const googleAuth = async (googleProfile, { userAgent, ipAddress } = {}) => {
+    const { id: googleId, emails, displayName, photos } = googleProfile;
+    const email = emails?.[0]?.value;
+    const avatar = photos?.[0]?.value;
+
+    if (!email) throw ApiError.badRequest('Google account has no email address');
+
+    let user = await User.scope('withAll').findOne({
+        where: { [Op.or]: [{ googleId }, { email }] },
+    });
+
+    if (user) {
+        // Link Google account if logging in with same email
+        if (!user.googleId) {
+            await user.update({ googleId, provider: 'google', avatar: avatar || user.avatar });
+        }
+    } else {
+        user = await User.create({
+            name: displayName,
+            email,
+            googleId,
+            provider: 'google',
+            avatar,
+            isEmailVerified: true, // Google already verified the email
+        });
+    }
+
+    await user.update({ lastLoginAt: new Date() });
+
+    const accessToken = generateAccessToken(user.id, user.role);
+    const refreshToken = await generateRefreshToken(user.id, { userAgent, ipAddress });
+
+    return { accessToken, refreshToken, user: sanitizeUser(user) };
+};
+
 // Logout
 const logout = async (refreshToken) => {
     if (refreshToken) await revokeRefreshToken(refreshToken);
 };
 
-module.exports = { register, verifyEmail, login, forgotPassword, resetPassword, logout };
+module.exports = { register, verifyEmail, login, forgotPassword, resetPassword, googleAuth, logout };

@@ -4,7 +4,7 @@ const authController = require('../controllers/auth.controller');
 const { validate } = require('../middlewares/validate');
 const { authenticate } = require('../middlewares/auth');
 const { authLimiterMiddleware } = require('../middlewares/rateLimiter');
-// const { passport } = require('../config/passport');
+const { passport } = require('../config/passport');
 const {
     registerValidator,
     loginValidator,
@@ -27,5 +27,13 @@ router.post('/reset-password/:token', validate(resetPasswordValidator), authCont
 
 // Current User
 router.get('/me', authenticate, authController.getMe);
+
+// Google OAuth
+router.get('/google', passport.authenticate('google', { session: false, scope: ['profile', 'email'] }));
+router.get(
+    '/google/callback',
+    passport.authenticate('google', { session: false, failureRedirect: `${process.env.CLIENT_URL}/login?error=google_failed` }),
+    authController.googleCallback
+);
 
 module.exports = router;
