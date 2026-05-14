@@ -3,6 +3,7 @@ const path = require('path');
 const fs = require('fs');
 const sharp = require('sharp');
 const { User } = require('../models');
+const { cacheGet, cacheSet, cacheDel, cacheDelPattern, CACHE_KEYS } = require('./cache.service');
 const { buildPagination, parsePagination, sanitizeUser } = require('../utils/helpers');
 const ApiError = require('../utils/ApiError');
 const config = require('../config/env');
@@ -11,6 +12,10 @@ const config = require('../config/env');
 const getUsers = async (query) => {
     const { page, limit, offset } = parsePagination(query);
     const search = query.search?.trim() || '';
+    const cacheKey = CACHE_KEYS.userList(page, limit, search);
+
+    const cached = await cacheGet(cacheKey);
+    if (cached) return cached;
 
     const where = {};
     if (search) {
@@ -42,11 +47,15 @@ const getUsers = async (query) => {
     const pagination = buildPagination(page, limit, count);
     const result = { users, pagination };
 
+    await cacheSet(cacheKey, result, 60); // cache 60 seconds
     return result;
 };
 
 // Get User By ID
 const getUserById = async (id) => {
+    const cacheKey = CACHE_KEYS.userById(id);
+    const cached = await cacheGet(cacheKey);
+    if (cached) return cached;
 
     const user = await User.findByPk(id, {
         attributes: {
@@ -62,6 +71,7 @@ const getUserById = async (id) => {
         plain.avatar = `${config.serverUrl}/uploads/avatars/${plain.avatar}`;
     }
 
+    await cacheSet(cacheKey, plain, 120);
     return plain;
 };
 
@@ -77,6 +87,10 @@ const updateProfile = async (userId, updates) => {
 
     await user.update(filtered);
 
+    // delete cache
+    await cacheDel(CACHE_KEYS.userById(userId));
+    await cacheDelPattern(CACHE_KEYS.userPattern());
+
     return sanitizeUser(user);
 };
 
@@ -86,17 +100,11 @@ const uploadAvatar = async (userId, file) => {
     if (!user) throw ApiError.notFound('User not found');
 
     const filename = `${userId}-${Date.now()}.webp`;
-    const avatarsDir = path.join(__dirname, '../../uploads/avatars');
-    const uploadPath = path.join(avatarsDir, filename);
-
-    // Create avatars directory if it doesn't exist
-    if (!fs.existsSync(avatarsDir)) {
-        fs.mkdirSync(avatarsDir, { recursive: true });
-    }
+    const uploadPath = path.join(__dirname, '../../uploads/avatars', filename);
 
     // Delete old avatar file if it exists locally
     if (user.avatar && !user.avatar.startsWith('http')) {
-        const oldPath = path.join(avatarsDir, user.avatar);
+        const oldPath = path.join(__dirname, '../../uploads/avatars', user.avatar);
         if (fs.existsSync(oldPath)) fs.unlinkSync(oldPath);
     }
 
@@ -107,6 +115,10 @@ const uploadAvatar = async (userId, file) => {
         .toFile(uploadPath);
 
     await user.update({ avatar: filename });
+
+    // Bust cache
+    await cacheDel(CACHE_KEYS.userById(userId));
+    await cacheDelPattern(CACHE_KEYS.userPattern());
 
     return `${config.serverUrl}/uploads/avatars/${filename}`;
 };
@@ -125,6 +137,9 @@ const deleteUser = async (adminId, targetId) => {
     }
 
     await user.destroy();
+
+    await cacheDel(CACHE_KEYS.userById(targetId));
+    await cacheDelPattern(CACHE_KEYS.userPattern());
 };
 
 // Change User Role (Admin)
@@ -135,6 +150,9 @@ const changeUserRole = async (adminId, targetId, role) => {
     if (!user) throw ApiError.notFound('User not found');
 
     await user.update({ role });
+
+    await cacheDel(CACHE_KEYS.userById(targetId));
+    await cacheDelPattern(CACHE_KEYS.userPattern());
 
     return sanitizeUser(user);
 };

@@ -9,7 +9,7 @@ const path = require('path');
 const config = require('./src/config/env');
 const logger = require('./src/config/logger');
 const { connectDB } = require('./src/config/database');
-// const { connectRedis } = require('./src/config/redis');
+const { connectRedis } = require('./src/config/redis');
 // const { initPassport, passport } = require('./src/config/passport');
 const routes = require('./src/routes');
 const { errorHandler, notFoundHandler } = require('./src/middlewares/errorHandler');
@@ -94,7 +94,7 @@ const startServer = async () => {
 
         // Connect to databases
         await connectDB();
-        // connectRedis();
+        connectRedis();
 
         // Start HTTP server
         const server = app.listen(config.port, () => {
