@@ -98,9 +98,15 @@ const getMe = async (req, res, next) => {
     try {
         const user = req.user.toJSON ? req.user.toJSON() : req.user;
         delete user.password;
+        
+        // Format avatar URL
+        if (user.avatar && !user.avatar.startsWith('http')) {
+            user.avatar = `${config.serverUrl}/uploads/avatars/${user.avatar}`;
+        }
+        
         return new ApiResponse(200, 'Profile fetched', user).send(res);
     } catch (err) { next(err); }
 };
 
 
-module.exports = { register, verifyEmail, login, refreshToken, logout, forgotPassword, resetPassword, getMe, googleCallback };
+module.exports = { register, verifyEmail, login, refreshToken, logout, forgotPassword, resetPassword, getMe };

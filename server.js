@@ -9,8 +9,8 @@ const path = require('path');
 const config = require('./src/config/env');
 const logger = require('./src/config/logger');
 const { connectDB } = require('./src/config/database');
-const { connectRedis } = require('./src/config/redis');
-const { initPassport, passport } = require('./src/config/passport');
+// const { connectRedis } = require('./src/config/redis');
+// const { initPassport, passport } = require('./src/config/passport');
 const routes = require('./src/routes');
 const { errorHandler, notFoundHandler } = require('./src/middlewares/errorHandler');
 const { apiLimiterMiddleware } = require('./src/middlewares/rateLimiter');
@@ -47,8 +47,8 @@ app.use(morgan(config.env === 'development' ? 'dev' : 'combined', {
 
 // Passport (OAuth)
 
-initPassport();
-app.use(passport.initialize());
+// initPassport();
+// app.use(passport.initialize());
 
 // Static Uploads
 
@@ -85,9 +85,16 @@ const scheduleCleanup = () => {
 
 const startServer = async () => {
     try {
+        // Ensure uploads directories exist
+        const uploadsDir = path.join(__dirname, 'uploads/avatars');
+        if (!require('fs').existsSync(uploadsDir)) {
+            require('fs').mkdirSync(uploadsDir, { recursive: true });
+            logger.info('Created uploads/avatars directory');
+        }
+
         // Connect to databases
         await connectDB();
-        connectRedis();
+        // connectRedis();
 
         // Start HTTP server
         const server = app.listen(config.port, () => {
@@ -113,8 +120,23 @@ const startServer = async () => {
 
     } catch (err) {
         logger.error(`Failed to start server: ${err.message}`);
+        console.error('Server startup error:', err);
         process.exit(1);
     }
 };
+
+// Handle uncaught exceptions
+process.on('uncaughtException', (err) => {
+    console.error('Uncaught Exception:', err);
+    logger.error(`Uncaught Exception: ${err.message}`, { stack: err.stack });
+    process.exit(1);
+});
+
+// Handle unhandled promise rejections
+process.on('unhandledRejection', (reason, promise) => {
+    console.error('Unhandled Rejection at:', promise, 'reason:', reason);
+    logger.error(`Unhandled Rejection: ${reason}`);
+    process.exit(1);
+});
 
 startServer();

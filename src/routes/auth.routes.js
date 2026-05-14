@@ -4,7 +4,7 @@ const authController = require('../controllers/auth.controller');
 const { validate } = require('../middlewares/validate');
 const { authenticate } = require('../middlewares/auth');
 const { authLimiterMiddleware } = require('../middlewares/rateLimiter');
-const { passport } = require('../config/passport');
+// const { passport } = require('../config/passport');
 const {
     registerValidator,
     loginValidator,

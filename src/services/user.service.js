@@ -86,11 +86,17 @@ const uploadAvatar = async (userId, file) => {
     if (!user) throw ApiError.notFound('User not found');
 
     const filename = `${userId}-${Date.now()}.webp`;
-    const uploadPath = path.join(__dirname, '../../uploads/avatars', filename);
+    const avatarsDir = path.join(__dirname, '../../uploads/avatars');
+    const uploadPath = path.join(avatarsDir, filename);
+
+    // Create avatars directory if it doesn't exist
+    if (!fs.existsSync(avatarsDir)) {
+        fs.mkdirSync(avatarsDir, { recursive: true });
+    }
 
     // Delete old avatar file if it exists locally
     if (user.avatar && !user.avatar.startsWith('http')) {
-        const oldPath = path.join(__dirname, '../../uploads/avatars', user.avatar);
+        const oldPath = path.join(avatarsDir, user.avatar);
         if (fs.existsSync(oldPath)) fs.unlinkSync(oldPath);
     }
 

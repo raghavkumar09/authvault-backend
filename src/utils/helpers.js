@@ -27,6 +27,13 @@ const sanitizeUser = (user) => {
     delete plain.emailVerificationToken;
     delete plain.passwordResetToken;
     delete plain.passwordResetExpires;
+    
+    // Format avatar URL
+    if (plain.avatar && !plain.avatar.startsWith('http')) {
+        const config = require('../config/env');
+        plain.avatar = `${config.serverUrl}/uploads/avatars/${plain.avatar}`;
+    }
+    
     return plain;
 };
 

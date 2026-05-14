@@ -136,4 +136,4 @@ const logout = async (refreshToken) => {
     if (refreshToken) await revokeRefreshToken(refreshToken);
 };
 
-module.exports = { register, verifyEmail, login, forgotPassword, resetPassword, googleAuth, logout };
+module.exports = { register, verifyEmail, login, forgotPassword, resetPassword, logout };
