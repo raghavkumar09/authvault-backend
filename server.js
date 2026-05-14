@@ -16,12 +16,11 @@ const { errorHandler, notFoundHandler } = require('./src/middlewares/errorHandle
 const { apiLimiterMiddleware } = require('./src/middlewares/rateLimiter');
 const { purgeExpiredTokens } = require('./src/services/token.service');
 
-// Load models (registers associations)
 require('./src/models');
 
 const app = express();
 
-// ─── Security Middleware ───────────────────────────────────────────────────
+// Security Middleware
 
 app.use(helmet({
   crossOriginResourcePolicy: { policy: 'cross-origin' }, // Allow serving uploaded images
@@ -34,28 +33,28 @@ app.use(cors({
   allowedHeaders: ['Content-Type', 'Authorization'],
 }));
 
-// ─── Request Parsing ───────────────────────────────────────────────────────
+// Request Parsing
 
 app.use(express.json({ limit: '10kb' }));
 app.use(express.urlencoded({ extended: true, limit: '10kb' }));
 app.use(cookieParser());
 
-// ─── HTTP Logging ──────────────────────────────────────────────────────────
+// HTTP Logging
 
 app.use(morgan(config.env === 'development' ? 'dev' : 'combined', {
   stream: { write: (msg) => logger.http(msg.trim()) },
 }));
 
-// ─── Passport (OAuth) ──────────────────────────────────────────────────────
+// Passport (OAuth)
 
 initPassport();
 app.use(passport.initialize());
 
-// ─── Static Uploads ────────────────────────────────────────────────────────
+// Static Uploads
 
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
-// ─── Rate Limiting ─────────────────────────────────────────────────────────
+// Rate Limiting
 
 app.use('/api', apiLimiterMiddleware);
 
@@ -92,8 +91,8 @@ const bootstrap = async () => {
 
     // Start HTTP server
     const server = app.listen(config.port, () => {
-      logger.info(`🚀 AuthVault server running on http://localhost:${config.port}`);
-      logger.info(`📡 Environment: ${config.env}`);
+      logger.info(`AuthVault server running on http://localhost:${config.port}`);
+      logger.info(`Environment: ${config.env}`);
     });
 
     // Start scheduled cleanup
