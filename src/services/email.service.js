@@ -1,47 +1,32 @@
-const nodemailer = require('nodemailer');
 const config = require('../config/env');
 const logger = require('../config/logger');
 
-// Create transporter once (lazy-init pattern)
-let transporter = null;
-
-const getTransporter = () => {
-    if (!transporter) {
-        const isGmail = config.email.host.includes('gmail');
-
-        const transporterConfig = isGmail ? {
-            service: 'gmail',
-            pool: true,
-            auth: {
-                user: config.email.user,
-                pass: config.email.pass,
-            },
-        } : {
-            host: config.email.host,
-            port: config.email.port,
-            secure: config.email.port === 465,
-            auth: {
-                user: config.email.user,
-                pass: config.email.pass,
-            },
-        };
-
-        transporter = nodemailer.createTransport(transporterConfig);
-    }
-    return transporter;
-};
-
-// Base email sender
+// Base email sender using Brevo API
 const sendEmail = async ({ to, subject, html }) => {
     try {
-        const info = await getTransporter().sendMail({
-            from: config.email.from,
-            to,
-            subject,
-            html,
+        const response = await fetch('https://api.brevo.com/v3/smtp/email', {
+            method: 'POST',
+            headers: {
+                'accept': 'application/json',
+                'api-key': config.email.apiKey,
+                'content-type': 'application/json',
+            },
+            body: JSON.stringify({
+                sender: { email: config.email.from, name: 'AuthVault' },
+                to: [{ email: to }],
+                subject: subject,
+                htmlContent: html,
+            }),
         });
-        logger.info(`Email sent to ${to}: ${info.messageId}`);
-        return info;
+
+        const data = await response.json();
+
+        if (!response.ok) {
+            throw new Error(data.message || 'Failed to send email via Brevo');
+        }
+
+        logger.info(`Email sent to ${to}: ${data.messageId || 'Success'}`);
+        return data;
     } catch (error) {
         logger.error(`Email failed to ${to}: ${error.message}`);
         throw error;

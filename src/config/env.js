@@ -19,10 +19,7 @@ const envSchema = Joi.object({
     JWT_ACCESS_EXPIRY: Joi.string().default('15m'),
     JWT_REFRESH_EXPIRY: Joi.string().default('7d'),
 
-    EMAIL_HOST: Joi.string().required(),
-    EMAIL_PORT: Joi.number().default(587),
-    EMAIL_USER: Joi.string().required(),
-    EMAIL_PASS: Joi.string().required(),
+    BREVO_API_KEY: Joi.string().required(),
     EMAIL_FROM: Joi.string().required(),
 
     GOOGLE_CLIENT_ID: Joi.string().allow('').default(''),
@@ -67,10 +64,7 @@ module.exports = {
         refreshExpiry: envVars.JWT_REFRESH_EXPIRY,
     },
     email: {
-        host: envVars.EMAIL_HOST,
-        port: envVars.EMAIL_PORT,
-        user: envVars.EMAIL_USER,
-        pass: envVars.EMAIL_PASS,
+        apiKey: envVars.BREVO_API_KEY,
         from: envVars.EMAIL_FROM,
     },
 
