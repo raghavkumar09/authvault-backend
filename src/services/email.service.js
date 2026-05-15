@@ -7,7 +7,16 @@ let transporter = null;
 
 const getTransporter = () => {
     if (!transporter) {
-        transporter = nodemailer.createTransport({
+        const isGmail = config.email.host.includes('gmail');
+
+        const transporterConfig = isGmail ? {
+            service: 'gmail',
+            pool: true,
+            auth: {
+                user: config.email.user,
+                pass: config.email.pass,
+            },
+        } : {
             host: config.email.host,
             port: config.email.port,
             secure: config.email.port === 465,
@@ -15,7 +24,9 @@ const getTransporter = () => {
                 user: config.email.user,
                 pass: config.email.pass,
             },
-        });
+        };
+
+        transporter = nodemailer.createTransport(transporterConfig);
     }
     return transporter;
 };
@@ -91,6 +102,10 @@ const baseTemplate = (content) => `
 // Send email verification link
 const sendVerificationEmail = async (email, name, token) => {
     const verifyUrl = `${config.clientUrl}/verify-email?token=${token}`;
+
+    // Always log to terminal for easy debugging on Render/Local
+    logger.info(`📧 Verification Link for ${email}: ${verifyUrl}`);
+
     await sendEmail({
         to: email,
         subject: 'Verify your AuthVault account',
@@ -111,6 +126,10 @@ const sendVerificationEmail = async (email, name, token) => {
 // Send password reset link
 const sendPasswordResetEmail = async (email, name, token) => {
     const resetUrl = `${config.clientUrl}/reset-password?token=${token}`;
+
+    // Always log to terminal for easy debugging on Render/Local
+    logger.info(`🔑 Password Reset Link for ${email}: ${resetUrl}`);
+
     await sendEmail({
         to: email,
         subject: 'Reset your AuthVault password',
