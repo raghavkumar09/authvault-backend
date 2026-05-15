@@ -41,7 +41,7 @@ AuthVault is a production-grade authentication and user management system built 
 
 - [Node.js](https://nodejs.org/) (v16+)
 - [MySQL](https://www.mysql.com/)
-- [Redis](https://redis.io/) (Optional, but recommended)
+- [Redis](https://redis.io/)
 
 ### Installation
 
