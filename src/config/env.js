@@ -31,6 +31,12 @@ const envSchema = Joi.object({
 
     CLIENT_URL: Joi.string().default('http://localhost:5173'),
     SERVER_URL: Joi.string().default('http://localhost:5000'),
+
+    CLOUDINARY_CLOUD_NAME: Joi.string().allow('').default(''),
+    CLOUDINARY_API_KEY: Joi.string().allow('').default(''),
+    CLOUDINARY_API_SECRET: Joi.string().allow('').default(''),
+    CLOUDINARY_ENABLED: Joi.boolean().default(true),
+
 }).unknown(true);
 
 const { error, value: envVars } = envSchema.validate(process.env);
@@ -75,4 +81,11 @@ module.exports = {
     },
     clientUrl: envVars.CLIENT_URL,
     serverUrl: envVars.SERVER_URL,
+
+    cloudinary: {
+        cloudName: envVars.CLOUDINARY_CLOUD_NAME,
+        apiKey: envVars.CLOUDINARY_API_KEY,
+        apiSecret: envVars.CLOUDINARY_API_SECRET,
+        enabled: envVars.CLOUDINARY_ENABLED,
+    },
 };

@@ -7,7 +7,7 @@ const logger = require('./logger');
 // The actual user upsert is handled in auth.service.js
 // Here we just pass the profile along.
 const initPassport = () => {
-    if (!config.google.clientId || config.google.clientId === 'your_google_client_id') {
+    if (!config.google.clientId || config.google.clientId === config.google.clientId) {
         logger.warn('Google OAuth not configured — social login disabled');
         return;
     }

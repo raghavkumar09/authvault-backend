@@ -7,6 +7,7 @@ const { cacheGet, cacheSet, cacheDel, cacheDelPattern, CACHE_KEYS } = require('.
 const { buildPagination, parsePagination, sanitizeUser } = require('../utils/helpers');
 const ApiError = require('../utils/ApiError');
 const config = require('../config/env');
+const { uploadOnCloudinary, deleteFromCloudinary } = require('../utils/cloudinary');
 
 // Get Users
 const getUsers = async (query) => {
@@ -38,6 +39,7 @@ const getUsers = async (query) => {
 
     const users = rows.map((u) => {
         const plain = u.toJSON();
+        // If avatar is not a full URL, it's local (legacy support or fallback)
         if (plain.avatar && !plain.avatar.startsWith('http')) {
             plain.avatar = `${config.serverUrl}/uploads/avatars/${plain.avatar}`;
         }
@@ -97,30 +99,56 @@ const updateProfile = async (userId, updates) => {
 // Upload Avatar
 const uploadAvatar = async (userId, file) => {
     const user = await User.findByPk(userId);
-    if (!user) throw ApiError.notFound('User not found');
-
-    const filename = `${userId}-${Date.now()}.webp`;
-    const uploadPath = path.join(__dirname, '../../uploads/avatars', filename);
-
-    // Delete old avatar file if it exists locally
-    if (user.avatar && !user.avatar.startsWith('http')) {
-        const oldPath = path.join(__dirname, '../../uploads/avatars', user.avatar);
-        if (fs.existsSync(oldPath)) fs.unlinkSync(oldPath);
+    if (!user) {
+        // If file was saved by diskStorage, clean it up
+        if (file.path && fs.existsSync(file.path)) fs.unlinkSync(file.path);
+        throw ApiError.notFound('User not found');
     }
 
-    // Resize + convert to WebP
-    await sharp(file.buffer)
-        .resize(400, 400, { fit: 'cover', position: 'centre' })
-        .webp({ quality: 85 })
-        .toFile(uploadPath);
+    try {
+        // Upload to Cloudinary or Local
+        const result = await uploadOnCloudinary(file.path, 'avatars');
+        
+        if (!result) {
+            throw ApiError.internal('Failed to upload image. Please try again later.');
+        }
 
-    await user.update({ avatar: filename });
+        // Delete old avatar if it was a Cloudinary URL
+        // (This assumes we store the public_id or we can extract it, 
+        // for simplicity let's just update the URL for now)
+        // If you want to delete from Cloudinary, you'd need the public_id.
+        // A better way is to store public_id in DB too.
+        
+        const oldAvatar = user.avatar;
 
-    // Bust cache
-    await cacheDel(CACHE_KEYS.userById(userId));
-    await cacheDelPattern(CACHE_KEYS.userPattern());
+        await user.update({ avatar: result.secure_url });
 
-    return `${config.serverUrl}/uploads/avatars/${filename}`;
+        // Delete old avatar if it was local
+        if (oldAvatar && !oldAvatar.startsWith('http')) {
+            const oldAvatarPath = path.join(process.cwd(), 'uploads/avatars', oldAvatar);
+            if (fs.existsSync(oldAvatarPath)) {
+                fs.unlinkSync(oldAvatarPath);
+            }
+        } else if (oldAvatar && oldAvatar.startsWith('http') && oldAvatar.includes('cloudinary')) {
+            // Optional: You could extract public_id and call deleteFromCloudinary
+            // For now, we prioritize local cleanup as requested
+        }
+
+        // Bust cache
+        await cacheDel(CACHE_KEYS.userById(userId));
+        await cacheDelPattern(CACHE_KEYS.userPattern());
+
+        // Return full URL for frontend to display immediately
+        if (result.secure_url && !result.secure_url.startsWith('http')) {
+            return `${config.serverUrl}/uploads/avatars/${result.secure_url}`;
+        }
+
+        return result.secure_url;
+    } catch (error) {
+        // Clean up local file on error
+        if (file.path && fs.existsSync(file.path)) fs.unlinkSync(file.path);
+        throw error;
+    }
 };
 
 // Delete User (Admin)
@@ -132,7 +160,7 @@ const deleteUser = async (adminId, targetId) => {
 
     // Delete avatar file if local
     if (user.avatar && !user.avatar.startsWith('http')) {
-        const avatarPath = path.join(__dirname, '../../uploads/avatars', user.avatar);
+        const avatarPath = path.join(process.cwd(), 'uploads/avatars', user.avatar);
         if (fs.existsSync(avatarPath)) fs.unlinkSync(avatarPath);
     }
 

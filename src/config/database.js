@@ -29,7 +29,7 @@ const connectDB = async () => {
         logger.info('MySQL connected via Sequelize');
 
         // Sync all models (alter in dev, no-alter in prod)
-        await sequelize.sync({ alter: config.env === 'development' });
+        await sequelize.sync();
         logger.info('Database synced');
     } catch (error) {
         logger.error(`Database connection failed: ${error.message}`);
